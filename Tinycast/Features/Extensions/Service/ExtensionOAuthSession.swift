@@ -15,6 +15,7 @@ struct ExtensionOAuthAuthorizeResult: Sendable {
 /// An OAuth 2.0 PKCE session: the browser authorizes and an `oauth` callback completes it.
 @MainActor
 final class ExtensionOAuthSession {
+    static let urlScheme = Bundle.main.object(forInfoDictionaryKey: "WeeCastURLScheme") as? String ?? "weecast"
     private var continuation: CheckedContinuation<[String: String], Error>?
     private var expectedState: String?
     private var timeoutTimer: Timer?
@@ -50,7 +51,7 @@ final class ExtensionOAuthSession {
     /// Deep links from the app delegate, such as `raycast://oauth?code=…`.
     static func handleCallbackURL(_ url: URL) -> Callback {
         guard let scheme = url.scheme?.lowercased(),
-            scheme == "raycast" || scheme == "tinycast" || scheme == "com.raycast"
+            scheme == "raycast" || scheme == urlScheme || scheme == "com.raycast"
         else { return .ignored }
 
         let host = url.host?.lowercased() ?? ""

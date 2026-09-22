@@ -11,20 +11,19 @@ Read this before touching any view body, `Theme` value, or the panel chrome.
 ## The look, in one paragraph
 
 Tinycast is a **command palette**: a borderless floating panel whose surface is just the
-OS behind-window blur under a 40% black scrim — there is no gray chrome. Everything on that surface is
-white at a fixed alpha ramp. The header and bottom bar **float over the list as fully transparent
+OS behind-window blur under a translucent Catppuccin Mocha Base scrim — there is no gray chrome. Its
+semantic colors come from the Catppuccin Mocha/Latte palette. The header and bottom bar **float over the list as fully transparent
 overlays**; there are no hard-edged bars, strips, or dividers. Rows don't clip under the bars, they
 **dissolve**: a scroll-driven gradient mask ghosts them as they pass beneath. Floating controls (the
 action pill, the menu circle, popover menus) are **Liquid Glass**.
 
-That paragraph describes **Dark**, which is the design. Light is the same design with the ink
-inverted: a white scrim over the same blur, and a black-alpha ramp at matched stops. Nothing about
-geometry, type, motion or state changes between them.
+That paragraph describes **Dark** (Catppuccin Mocha). Light uses Catppuccin Latte over the same blur.
+Nothing about geometry, type, motion or state changes between them.
 
 Five load-bearing ideas, in priority order:
 
 1. **Surface = scrim over behind-window blur.** No solid backgrounds. Depth comes from the desktop showing through.
-2. **One alpha ramp, never grays.** Ink at fixed stops — white over the dark surface, black over the light one.
+2. **One semantic palette, never grays.** Catppuccin roles carry the surface, text and state colors.
 3. **Floating bars, not chrome.** Header/footer are transparent overlays; the list fills the whole panel.
 4. **Edges dissolve, they don't clip.** Scroll-driven mask, no separators between list and bars.
 5. **Glass only on floating controls.** The main surface is never glass; pills/menus/circles are.
@@ -35,8 +34,8 @@ Five load-bearing ideas, in priority order:
 
 These are the things that quietly break the look if changed. Preserve them unless the task is explicitly to change them.
 
-- **Dark is the baseline and its values are frozen.** Every `Theme.Colors` token resolves per appearance, and its **dark branch is the literal the forced-dark build shipped** — restated, never recomputed. Retune a light branch freely; touch a dark one only when the task is to change Dark. `AppCore.applyAppearance()` is the only place an appearance is assigned, from `AppSettings.appearance`; `.system` assigns `nil` so AppKit follows macOS.
-- **New colors go through `Theme.Colors.ramp(dark:light:)`** (an alpha that inverts) or `adaptive(dark:light:)` (two explicit `NSColor`s, for anything that isn't a plain inversion — `panelScrim`, `glassFrost`). Never a bare `Color.white.opacity(…)` in a view: it disappears in Light.
+- **Catppuccin Mocha/Latte is the frozen semantic appearance palette.** The mapped `Theme.Colors` roles below resolve per appearance; intentional inverse-ink, preview, checker and system-accent tokens retain their specialized meanings. `AppCore.applyAppearance()` is the only place an appearance is assigned, from `AppSettings.appearance`; `.system` assigns `nil` so AppKit follows macOS.
+- **New shared colors go through `Theme.Colors.adaptive(dark:light:)`** with explicit palette values. `ramp(dark:light:)` remains for intentional inverse-ink tokens. Never a bare `Color.white.opacity(…)` in a view: it disappears in Light.
 - **No grays, no opaque fills on the surface.** Reach for `Theme.Colors.*` instead of `.gray`, `NSColor.windowBackground`, etc.
 - **Three things stay fixed in both appearances, on purpose.** The `EdgeDissolve`/`OverflowFade` gradients are **mask luminance, not color** — inverting them breaks the dissolve everywhere. `ExtensionTintColors` and a tinted `IconCache` tile keep white ink, because a saturated tile carries its own contrast. And `IconCache` cannot use a dynamic `NSColor` at all: it rasterizes off-main, so the surface is carried explicitly and is part of the cache key.
 - **An icon is drawn for a surface *and* a system icon style, and both move under you.** macOS restyles the icons `NSWorkspace` hands out when System Settings → Appearance → **Icon & widget style** changes, so `IconStyleMonitor` and Tinycast's own appearance both call `IconCache.invalidateStyled()`. **The monitor may not invalidate on the notification itself.** AppKit posts `NSWorkspaceIconAppearanceConfigurationDidChange` before IconServices has swapped what `NSWorkspace` vends — measured at 25–120ms behind, jittering run to run — and the images it hands back are live objects macOS restyles in place, so flattening one on the signal freezes the *outgoing* style into a bitmap nothing ever invalidates again. `IconStyleMonitor` therefore polls `IconCache.styleFingerprint()` until the pixels actually move, and only then invalidates. Waiting also sidesteps the cost: re-flattening every icon the instant a restyle begins forces a cold IconServices regeneration, measured at 160× the settled draw cost. That drops the cached bitmaps, bumps every cache key so an in-flight decode cannot repopulate a stale one, and moves `IconCache.style.generation`. **Any view that draws an icon must key its fetch on that generation** — wrap the view's own key in `IconRequest`, or call `IconCache.observeStyle()` where the icon is resolved synchronously in a `body`. It is reached through `IconCache` rather than injected precisely because icons are drawn in menus, popovers and every list, where a missed injection would be a silent staleness bug.
@@ -175,36 +174,39 @@ hand-written weight table: on macOS `.headline` is Bold and `.caption2` is Mediu
 *lightens* them the moment the user leaves the default size. `menuSymbol` is the deliberate exception:
 it is an explicitly-sized glyph treatment, not a system text style, so scaling preserves Medium.
 
-### Colors (`Theme.Colors`) — the alpha ramp
+### Colors (`Theme.Colors`) — Catppuccin Mocha and Latte
 
-The **Dark column is the design and is frozen**; each value is the literal the forced-dark build
-shipped. Light is the same stop with the ink inverted, and is the only column open to retuning.
+The palette roles below are frozen. Dark resolves to Mocha and Light to Latte.
+Latte success text uses a darker green (`#2C701E`) for legibility. Destructive buttons keep their red
+fill with primary text, so normal and highlighted labels retain contrast.
 
 | Token             | Dark           | Light          | Use                                              |
 | ----------------- | -------------- | -------------- | ------------------------------------------------ |
-| `panelScrim`      | black **0.40** | white **0.55** | the panel scrim over vibrancy                    |
-| `selection`       | white 0.10     | black 0.09     | selected row fill (keyboard/active selection)    |
-| `rowHover`        | white 0.05     | black 0.045    | mouse-hover fill (always fainter than selection) |
-| `menuHover`       | white 0.10     | black 0.09     | popover-menu row hover                           |
-| `separator`       | white 0.10     | black 0.12     | a list↔preview hairline (clipboard, file search) |
-| `controlSurface`  | white 0.10     | black 0.08     | filled keycaps, glyph tiles                      |
-| `border`          | white 0.20     | black 0.18     | outlined keycap borders                          |
-| `textPrimary`     | white 1.00     | black 1.00     | search text and caret, volume fill and knob      |
-| `textSecondary`   | white 0.60     | black 0.60     | secondary labels                                 |
-| `textTertiary`    | white 0.40     | black 0.42     | placeholders, trailing kind labels               |
-| `menuSymbol`      | white 0.70     | black 0.70     | native popover-menu symbols                      |
-| `iconPlaceholder` | white 0.06     | black 0.06     | the empty tile a row paints while an icon decodes |
-| `sheen`           | white 0.04     | black 0.04     | the wash behind the Onboarding header            |
-| `cardFill`        | white 0.05     | black 0.04     | settings/calc card fill                          |
-| `cardStroke`      | white 0.10     | black 0.10     | settings/calc card border + inset dividers       |
-| `glassFrost`      | white 0.05     | white **0.25** | whitish tint layered into the floating glass     |
-| `noteText`        | white 0.90     | black 0.85     | Notes body text                                  |
-| `dropGuide`       | white 0.35     | black 0.35     | the palette's drop guides while dragging         |
+| `panelScrim`      | Base `#1E1E2E` 72%       | Base `#EFF1F5` 72%       | the panel scrim over vibrancy                    |
+| `selection`       | Surface1 `#45475A` 45%   | Surface1 `#BCC0CC` 45%   | selected row fill (keyboard/active selection)    |
+| `selectionBorder` | Mauve `#CBA6F7`          | Mauve `#8839EF`          | opaque selected launcher row/card outline        |
+| `rowHover`        | Surface0 `#313244` 58%   | Surface0 `#CCD0DA` 58%   | mouse-hover fill (always fainter than selection) |
+| `menuHover`       | Surface1 `#45475A` 68%   | Surface1 `#BCC0CC` 68%   | popover-menu row hover                           |
+| `separator`       | Surface2 `#585B70` 55%   | Surface2 `#ACB0BE` 55%   | a list↔preview hairline (clipboard, file search) |
+| `controlSurface`  | Surface1 `#45475A` 62%   | Surface1 `#BCC0CC` 62%   | filled keycaps, glyph tiles                      |
+| `border`          | Surface2 `#585B70` 78%   | Surface2 `#ACB0BE` 78%   | outlined keycap borders                          |
+| `textPrimary`     | Text `#CDD6F4`            | Text `#4C4F69`            | search text and caret, volume fill and knob      |
+| `textSecondary`   | Subtext1 `#BAC2DE`        | Subtext1 `#5C5F77`        | secondary labels                                 |
+| `textTertiary`    | Subtext0 `#A6ADC8`        | Subtext1 `#5C5F77`        | readable placeholders and supporting text        |
+| `iconPlaceholder` | Mantle `#181825` 55%      | Mantle `#E6E9EF` 55%      | the empty tile a row paints while an icon decodes |
+| `sheen`           | Mantle `#181825` 40%      | Mantle `#E6E9EF` 40%      | the wash behind the Onboarding header            |
+| `cardFill`        | Mantle `#181825` 52%      | Mantle `#E6E9EF` 52%      | settings/calc card fill                          |
+| `cardStroke`      | Surface2 `#585B70` 55%   | Surface2 `#ACB0BE` 55%   | settings/calc card border + inset dividers       |
+| `glassFrost`      | Surface0 `#313244` 32%   | Surface0 `#CCD0DA` 32%   | tint layered into the floating glass             |
+| `noteText`        | Text `#CDD6F4` 90%        | Text `#4C4F69` 90%        | Notes body text                            |
 
-`glassFrost` is white in **both** — the frost brightens glass rather than inking it — so it is an
-`adaptive` pair, not a `ramp`. `panelScrim` is the ramp's inverse, for the same reason.
-`brand`, `primaryAction`, `destructive`, `success` and `dropGuideArmed` are fixed hues and adapt on
-their own.
+`emojiCell` shares `rowHover`; `brand` is Mauve, `destructive` is Red, `success` is contrast-adjusted Green, and
+`dropGuideArmed`/`progress` are Blue. Existing inverse-ink, preview and checker tokens stay unchanged.
+
+Secondary and tertiary text meet 4.5:1 against Base and the selected fill in both appearances.
+Latte uses Subtext1 for both: Subtext0 falls short even against Base. The opaque Mauve selection
+outline exceeds 3:1 against Base and the selected fill. These are nominal palette contrast checks;
+the translucent panel still needs visual verification over the desktop.
 
 Beyond these, `.secondary`/`.tertiary` foreground styles are fine for SF Symbols (they resolve against
 the environment's appearance). **Selection always beats hover** when a row is both.
@@ -383,7 +385,7 @@ Source: `Theme.frosted(in:)`, `DesignSystem/PopoverMenu.swift`.
 
 Glass is normally for floating controls. The dialog root is the one modal-surface exception.
 
-- `View.frosted(in:)` = `glassEffect(.regular.interactive().tint(glassFrost), in:)` + `.tint(.clear)` — interactive lensing with a whitish frost tint (`glassFrost`) so the glass reads brighter than clear. Used on the action-group capsule, the menu circle and `PopoverMenu`. Dialogs intentionally use untinted, non-interactive `.glassEffect(.regular)` on their root instead; HUDs retain the panel recipe (see "Dialogs & HUD"). Tune interactive frost via the `glassFrost` token, not per call site.
+- `View.frosted(in:)` = `glassEffect(.regular.interactive().tint(glassFrost), in:)` + `.tint(.clear)` — interactive lensing with Catppuccin Surface0 tint. Used on the action-group capsule, the menu circle and `PopoverMenu`. Dialogs intentionally use untinted, non-interactive `.glassEffect(.regular)` on their root instead; HUDs retain the panel recipe (see "Dialogs & HUD"). Tune interactive frost via the `glassFrost` token, not per call site.
 - **Menus are in-window overlays, not system popovers.** `.contextMenu`/`NSMenu` stall clicks for seconds inside a `LazyVStack` and spill outside the panel. Use `PopoverMenu` anchored to a corner via `.overlay`, inset `menuInset` (8pt) so its own corner isn't clipped by the panel's. A menu hung off a control instead of a corner — the clipboard type filter, `.topTrailing` — insets by that control's own metrics so their edges line up.
 - **A menu's `width` is fixed, never intrinsic**, so it can't jitter as its rows change. Every header menu states its own at its `RootPaletteView.menuContent` case — `menuWidth 276`, or a token of its own where that reads too wide (`clipboardFilterMenuWidth`, `fileSearchFilterMenuWidth`, `emojiCategoryMenuWidth`) — so retuning one never moves another. Native footer menus add 30pt without changing those header widths; extension Actions owns its nearby 310pt width inside the feature.
 - **`PopoverMenu`** uses `glassEffect(.regular)` with `menuPanel 16` corners and **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native. A footer menu raises only its attached bottom corner to the controls' 18-point radius, so the two silhouettes meet exactly.

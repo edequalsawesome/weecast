@@ -1,7 +1,7 @@
 import Foundation
 
 /// An `extensions` deep link: `raycast://extensions/<owner>/<extension>/<command>?arguments={…}`.
-/// `tinycast://` mirrors it so our own links never depend on Raycast winning the scheme.
+/// The app's channel scheme mirrors it without claiming Raycast's external links.
 struct ExtensionDeepLink: Sendable, Equatable {
     let ownerOrAuthor: String?
     let extensionName: String
@@ -22,14 +22,14 @@ struct ExtensionDeepLink: Sendable, Equatable {
         return manifestName.split(separator: "/").last?.lowercased() == extensionName.lowercased()
     }
 
-    static func claims(_ url: URL) -> Bool {
+    static func claims(_ url: URL, urlScheme: String = "weecast") -> Bool {
         guard let scheme = url.scheme?.lowercased() else { return false }
-        return ["raycast", "tinycast", "com.raycast", "raycastinternal"].contains(scheme)
+        return ["raycast", urlScheme, "com.raycast", "raycastinternal"].contains(scheme)
     }
 
     /// Host and first path segment unify `raycast://extensions/…` and `com.raycast:/extensions/…`.
-    static func parse(url: URL) -> ExtensionDeepLink? {
-        guard claims(url) else { return nil }
+    static func parse(url: URL, urlScheme: String = "weecast") -> ExtensionDeepLink? {
+        guard claims(url, urlScheme: urlScheme) else { return nil }
         var segments: [String] = []
         if let host = url.host, !host.isEmpty { segments.append(host) }
         segments += url.pathComponents.filter { $0 != "/" }

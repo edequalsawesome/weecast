@@ -3,6 +3,39 @@
 Tinycast is licensed under the GNU Affero General Public License v3 — see [LICENSE](LICENSE). It
 also redistributes the third-party material recorded below, under the terms stated for each.
 
+## WeeCast modifications
+
+WeeCast is a modified version of Tinycast. Copyright (C) 2026 Ed Thomas. Theme-only fork updated on 2026-09-22;
+Tinycast copyright and AGPL-3.0 notices remain in [LICENSE](LICENSE).
+
+## Catppuccin palette
+
+WeeCast uses the Catppuccin palette, which is MIT licensed:
+
+```
+MIT License
+
+Copyright (c) 2021 Catppuccin Org
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Brand marks — `Tinycast/Assets.xcassets/AIBrand*.imageset`
 
 Thirteen monochrome template SVGs, ~300 B–2 KB each, drawn beside a model's name in the model

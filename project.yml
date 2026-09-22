@@ -51,7 +51,10 @@ targets:
           subpath: Contents/Helpers
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app
+        PRODUCT_NAME: WeeCast
+        PRODUCT_MODULE_NAME: Tinycast
+        PRODUCT_BUNDLE_IDENTIFIER: com.edequalsawesome.weecast
+        WEECAST_URL_SCHEME: weecast
         INFOPLIST_FILE: Tinycast/Info.plist
         CODE_SIGN_ENTITLEMENTS: Tinycast/Tinycast.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: tinycast
@@ -64,8 +67,9 @@ targets:
         # locally-run build gets its own prefs, caches, TCC grants and login item instead of
         # inheriting — and corrupting — the installed app's state.
         Debug:
-          PRODUCT_NAME: Tinycast Dev
-          PRODUCT_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+          PRODUCT_NAME: WeeCast Dev
+          PRODUCT_BUNDLE_IDENTIFIER: com.edequalsawesome.weecast.dev
+          WEECAST_URL_SCHEME: weecast-dev
 
   ClipboardTextHelper:
     type: tool

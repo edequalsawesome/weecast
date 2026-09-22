@@ -452,7 +452,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             URL(string: target).flatMap { $0.scheme == nil ? nil : $0 }
             ?? URL(fileURLWithPath: (target as NSString).expandingTildeInPath)
         // Extensions address Raycast by scheme; handing that to the workspace would launch Raycast.
-        if ExtensionDeepLink.claims(url) {
+        if ExtensionDeepLink.claims(url, urlScheme: ExtensionOAuthSession.urlScheme) {
             openRaycastURL(url)
             return
         }
@@ -475,7 +475,9 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
     /// A command URL runs it when installed; every other Raycast URL just brings the palette back.
     private func openRaycastURL(_ url: URL) {
-        if let link = ExtensionDeepLink.parse(url: url), (try? context?.launch(link)) != nil {
+        if let link = ExtensionDeepLink.parse(url: url, urlScheme: ExtensionOAuthSession.urlScheme),
+            (try? context?.launch(link)) != nil
+        {
             return
         }
         context?.reopenPalette()

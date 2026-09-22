@@ -35,7 +35,7 @@ const wait = (ms = 60) => new Promise((resolve) => setTimeout(resolve, ms));
 async function run(name, source, mode, verify, options) {
   console.log(`\n▶ ${name}`);
   const harness = createHarness(options);
-  harness.boot(bootConfig());
+  harness.boot(bootConfig({ urlScheme: "weecast-dev" }));
   const code = compile(source);
   harness.start("s1", code, "/fixtures/cmd.js", "/fixtures", mode, {});
   await wait();
@@ -619,6 +619,7 @@ export default async function Command() {
     verifierLen: req.codeVerifier.length,
     challengeLen: req.codeChallenge.length,
     stateLen: req.state.length,
+    state: req.state,
     url: req.toURL(),
     authCode: authRes.authorizationCode,
     retrievedAccessToken: retrieved?.accessToken,
@@ -1090,6 +1091,8 @@ export async function runFixtures() {
     const result = harness.call("globalThis.__oauthTest");
     check("generates PKCE codeVerifier and challenge", result?.verifierLen >= 43 && result?.challengeLen >= 43, JSON.stringify(result));
     check("generates OAuth state", result?.stateLen >= 20);
+    check("OAuth returns to the booted app channel",
+      JSON.parse(Buffer.from(result.state, "base64url").toString()).scheme === "weecast-dev");
     check("builds correct authorization URL with redirect_uri", new URL(result.url).searchParams.get("redirect_uri") === "https://raycast.com/redirect?packageName=Extension" && new URL(result.url).searchParams.get("client_id") === "client-123");
     check("authorize returns authorization code", result?.authCode === "auth-code-12345");
     check("stores and retrieves TokenSet with tokens", result?.retrievedAccessToken === "gho_secret123" && result?.retrievedRefreshToken === "ghr_secret456");

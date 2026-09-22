@@ -399,8 +399,8 @@ final class AppCore {
         case .ignored:
             break
         }
-        guard ExtensionDeepLink.claims(url) else { return }
-        guard let link = ExtensionDeepLink.parse(url: url) else {
+        guard ExtensionDeepLink.claims(url, urlScheme: ExtensionOAuthSession.urlScheme) else { return }
+        guard let link = ExtensionDeepLink.parse(url: url, urlScheme: ExtensionOAuthSession.urlScheme) else {
             paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)
             return
         }

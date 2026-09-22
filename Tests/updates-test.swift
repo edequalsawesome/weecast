@@ -111,6 +111,9 @@ struct UpdatesTests {
 
         expect(stable.updatesItself && beta.updatesItself, "both shipped channels update")
         expect(!dev.updatesItself, "a local build does not update itself")
+        for id in ["com.edequalsawesome.weecast", "com.edequalsawesome.weecast.dev"] {
+            expect(!ReleaseChannel(bundleID: id).updatesItself, "fork builds never install upstream updates")
+        }
 
         expect(stable.accepts(prerelease: false), "stable takes releases")
         expect(!stable.accepts(prerelease: true), "stable never crosses to a prerelease")

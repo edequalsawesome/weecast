@@ -200,7 +200,7 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
                     return try String(contentsOf: bundle, encoding: .utf8)
                 }.value
                 guard !Task.isCancelled else { return }
-                try await runtime.boot(config: .current(supportDirectory: support))
+                try await runtime.boot(config: .current(supportDirectory: support, urlScheme: ExtensionOAuthSession.urlScheme))
                 guard !Task.isCancelled else { runtime.shutdown(); return }
                 await runtime.start(session: session.id, code: code, file: bundle, mode: command.mode, context: context)
             } catch {

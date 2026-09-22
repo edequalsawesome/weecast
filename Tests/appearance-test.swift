@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// Pins `AGENTS.md`: a token's dark branch is the literal the forced-dark build shipped.
+/// Pins the frozen Catppuccin Mocha and Latte semantic palette.
 @main
 @MainActor
 struct AppearanceTests {
@@ -28,10 +28,11 @@ struct AppearanceTests {
         return out
     }
 
-    static func dark(_ label: String, _ token: Color, is expected: Color) {
-        let actual = components(token, .darkAqua)
-        let wanted = components(expected, .darkAqua)
-        check("dark \(label)", actual == wanted, "\(actual) != \(wanted)")
+    static func palette(_ label: String, _ token: Color, dark: [Int], light: [Int]) {
+        let actualDark = components(token, .darkAqua)
+        let actualLight = components(token, .aqua)
+        check("dark \(label)", actualDark == dark, "\(actualDark) != \(dark)")
+        check("light \(label)", actualLight == light, "\(actualLight) != \(light)")
     }
 
     /// A token that resolves identically in both never adapted at all.
@@ -41,34 +42,90 @@ struct AppearanceTests {
             "light resolves identically to dark")
     }
 
+    static func composite(_ token: Color, _ appearance: NSAppearance.Name, over: [Double]) -> [Double] {
+        let rgba = components(token, appearance).map { Double($0) / 255 }
+        return zip(rgba.prefix(3), over).map { $0 * rgba[3] + $1 * (1 - rgba[3]) }
+    }
+
+    static func contrast(_ first: [Double], _ second: [Double]) -> Double {
+        func luminance(_ rgb: [Double]) -> Double {
+            let linear = rgb.map { $0 <= 0.04045 ? $0 / 12.92 : pow(($0 + 0.055) / 1.055, 2.4) }
+            return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722
+        }
+        let first = luminance(first)
+        let second = luminance(second)
+        return (max(first, second) + 0.05) / (min(first, second) + 0.05)
+    }
+
+    static func textContrast() {
+        print("# readable text on Catppuccin Base and selected rows")
+        let appearances: [(String, NSAppearance.Name, [Double])] = [
+            ("Mocha", .darkAqua, [30, 30, 46]), ("Latte", .aqua, [239, 241, 245])
+        ]
+        for (name, appearance, bytes) in appearances {
+            let base = bytes.map { $0 / 255 }
+            let success = composite(Theme.Colors.success, appearance, over: base)
+            check("\(name) inserted text >= 4.5:1", contrast(success, base) >= 4.5)
+            for opacity in [0.16, 0.24] {
+                let fill = composite(Theme.Colors.destructive.opacity(opacity), appearance, over: base)
+                let label = composite(Theme.Colors.textPrimary, appearance, over: fill)
+                check("\(name) destructive button label at \(opacity) >= 4.5:1", contrast(label, fill) >= 4.5)
+            }
+            let selected = composite(Theme.Colors.selection, appearance, over: base)
+            let selectedCard = composite(Theme.Colors.cardFill, appearance, over: selected)
+            for (surface, background) in [
+                ("Base", base), ("selection", selected), ("selected card", selectedCard)
+            ] {
+                for (label, token) in [
+                    ("secondary", Theme.Colors.textSecondary), ("tertiary", Theme.Colors.textTertiary)
+                ] {
+                    let ratio = contrast(composite(token, appearance, over: background), background)
+                    check("\(name) \(label) on \(surface) >= 4.5:1", ratio >= 4.5,
+                          String(format: "%.2f:1", ratio))
+                }
+                let border = composite(Theme.Colors.selectionBorder, appearance, over: background)
+                let ratio = contrast(border, background)
+                check("\(name) selection border on \(surface) >= 3:1", ratio >= 3,
+                      String(format: "%.2f:1", ratio))
+            }
+            let hover = composite(Theme.Colors.rowHover, appearance, over: base)
+            check("\(name) selection fill stays stronger than hover",
+                  contrast(selected, base) > contrast(hover, base))
+        }
+    }
+
     static func main() {
         let c = Theme.Colors.self
 
-        print("# dark branches are the shipped literals")
-        dark("panelScrim", c.panelScrim, is: Color.black.opacity(0.4))
-        dark("dialogDimming", c.dialogDimming, is: Color.black.opacity(0.34))
-        dark("tooltipShadow", c.tooltipShadow, is: Color.black.opacity(0.18))
-        dark("selection", c.selection, is: Color.white.opacity(0.10))
-        dark("rowHover", c.rowHover, is: Color.white.opacity(0.05))
-        dark("menuHover", c.menuHover, is: Color.white.opacity(0.10))
-        dark("separator", c.separator, is: Color.white.opacity(0.10))
-        dark("controlSurface", c.controlSurface, is: Color.white.opacity(0.10))
-        dark("border", c.border, is: Color.white.opacity(0.20))
-        dark("textSecondary", c.textSecondary, is: Color.white.opacity(0.60))
-        dark("textTertiary", c.textTertiary, is: Color.white.opacity(0.40))
-        dark("noteText", c.noteText, is: Color.white.opacity(0.90))
-        dark("cardFill", c.cardFill, is: Color.white.opacity(0.05))
-        dark("cardStroke", c.cardStroke, is: Color.white.opacity(0.10))
-        dark("glassFrost", c.glassFrost, is: Color.white.opacity(0.05))
-        dark("dropGuide", c.dropGuide, is: Color.white.opacity(0.35))
-        dark("brand", c.brand, is: Color(red: 0.525, green: 0.231, blue: 1.0))
+        textContrast()
+        palette("dialogDimming", c.dialogDimming, dark: [0, 0, 0, 87], light: [0, 0, 0, 87])
+        palette("tooltipShadow", c.tooltipShadow, dark: [0, 0, 0, 46], light: [0, 0, 0, 46])
 
-        print("# tokens that absorbed a literal duplicated across views")
-        dark("iconPlaceholder", c.iconPlaceholder, is: Color.white.opacity(0.06))
-        dark("sheen", c.sheen, is: Color.white.opacity(0.04))
-        dark("textPrimary", c.textPrimary, is: Color.white)
-        // VolumeHUDView draws white 0.85; textPrimary is alpha 1, so opacity must reproduce it.
-        dark("textPrimary at 0.85", c.textPrimary.opacity(0.85), is: Color.white.opacity(0.85))
+        print("# Catppuccin Mocha and Latte semantic tokens")
+        palette("panelScrim", c.panelScrim, dark: [30, 30, 46, 184], light: [239, 241, 245, 184])
+        palette("selection", c.selection, dark: [69, 71, 90, 115], light: [188, 192, 204, 115])
+        palette("selectionBorder", c.selectionBorder,
+                dark: [203, 166, 247, 255], light: [136, 57, 239, 255])
+        palette("rowHover", c.rowHover, dark: [49, 50, 68, 148], light: [204, 208, 218, 148])
+        palette("emojiCell", c.emojiCell, dark: [49, 50, 68, 148], light: [204, 208, 218, 148])
+        palette("menuHover", c.menuHover, dark: [69, 71, 90, 173], light: [188, 192, 204, 173])
+        palette("separator", c.separator, dark: [88, 91, 112, 140], light: [172, 176, 190, 140])
+        palette("cardStroke", c.cardStroke, dark: [88, 91, 112, 140], light: [172, 176, 190, 140])
+        palette("controlSurface", c.controlSurface, dark: [69, 71, 90, 158], light: [188, 192, 204, 158])
+        palette("border", c.border, dark: [88, 91, 112, 199], light: [172, 176, 190, 199])
+        palette("textPrimary", c.textPrimary, dark: [205, 214, 244, 255], light: [76, 79, 105, 255])
+        palette("textSecondary", c.textSecondary, dark: [186, 194, 222, 255], light: [92, 95, 119, 255])
+        palette("textTertiary", c.textTertiary, dark: [166, 173, 200, 255], light: [92, 95, 119, 255])
+        palette("noteText", c.noteText, dark: [205, 214, 244, 230], light: [76, 79, 105, 230])
+        palette("iconPlaceholder", c.iconPlaceholder, dark: [24, 24, 37, 140], light: [230, 233, 239, 140])
+        palette("sheen", c.sheen, dark: [24, 24, 37, 102], light: [230, 233, 239, 102])
+        palette("cardFill", c.cardFill, dark: [24, 24, 37, 133], light: [230, 233, 239, 133])
+        palette("glassFrost", c.glassFrost, dark: [49, 50, 68, 82], light: [204, 208, 218, 82])
+        palette("brand", c.brand, dark: [203, 166, 247, 255], light: [136, 57, 239, 255])
+        palette("dropGuideArmed", c.dropGuideArmed, dark: [137, 180, 250, 255], light: [30, 102, 245, 255])
+        palette("progress", c.progress, dark: [137, 180, 250, 255], light: [30, 102, 245, 255])
+        palette("destructive", c.destructive, dark: [243, 139, 168, 255], light: [210, 15, 57, 255])
+        palette("success", c.success, dark: [166, 227, 161, 255], light: [44, 112, 30, 255])
 
         print("# every surface token resolves per appearance")
         for (label, token) in [
@@ -83,9 +140,9 @@ struct AppearanceTests {
             adapts(label, token)
         }
 
-        print("# the scrim inverts rather than ramping: it lightens the light surface")
-        check("light scrim is white", components(c.panelScrim, .aqua)[0] == 255)
-        check("dark scrim is black", components(c.panelScrim, .darkAqua)[0] == 0)
+        print("# the scrim keeps its appearance-specific Catppuccin base")
+        check("light scrim is Latte Base", components(c.panelScrim, .aqua).prefix(3) == [239, 241, 245])
+        check("dark scrim is Mocha Base", components(c.panelScrim, .darkAqua).prefix(3) == [30, 30, 46])
 
         print("# palette transparency keeps the default in each appearance")
         for appearance: NSAppearance.Name in [.darkAqua, .aqua] {
@@ -124,8 +181,7 @@ struct AppearanceTests {
                 highlights.allSatisfy { $0.prefix(3) == [255, 255, 255] && $0[3] < 128 })
         }
 
-        // Frost brightens glass in both, so it is the one token that stays white either side.
-        check("frost stays white", components(c.glassFrost, .aqua)[0] == 255)
+        check("frost uses Latte Surface0", components(c.glassFrost, .aqua).prefix(3) == [204, 208, 218])
 
         print("# .system hands the choice back to AppKit")
         check("system is nil", AppAppearance.system.nsAppearance == nil)

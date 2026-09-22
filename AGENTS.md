@@ -67,11 +67,10 @@ feature's doc, under its own `## Invariants`.
 - **Swift 6 language mode: data-race violations are hard errors.** `@MainActor` is the default,
   cross-actor model types are `Sendable`, and heavy or IO-bound work goes off-main as `nonisolated`
   functions driven by `Task.detached`. Do not add a second actor.
-- **Dark is the baseline, and a colour's dark branch is the literal it always was.** `Theme.Colors`
-  resolves per appearance through `ramp`/`adaptive`; every dark value is the `Color.white.opacity(…)`
-  the forced-dark build shipped, restated rather than re-derived. Retune a light branch freely — change
-  a dark one only when the task is to change Dark. `AppAppearance` drives `NSApp.appearance`, and
-  `.system` maps to `nil` so AppKit follows macOS on its own.
+- **Catppuccin Mocha is Dark and Latte is Light.** `Theme.Colors` owns the semantic palette.
+  Preserve readable text and selection contrast; keep geometry and behavior upstream-compatible.
+  Inverse-ink masks, fixed extension tints and native system accents retain their existing meanings.
+  `AppAppearance` drives `NSApp.appearance`; `.system` follows macOS.
 - **Tinycast presents its own dialogs — never `NSAlert` or a system popover.** A question
   goes through `DialogController`, a report through a HUD via `HUDPresenter`.
 - **A networked feature fetches on a private `.ephemeral`, `urlCache = nil` session**, never
@@ -115,7 +114,7 @@ feature's doc, under its own `## Invariants`.
   constant or type instead. Cap 100 characters, delete rather than update, and never comment a change
   you just made. Nothing lints this; get it right the first time.
   Full rules: [standards.md#comments](docs/standards.md#comments).
-- **Debug builds are their own channel** — `Tinycast Dev.app` / `com.tinycast.app.dev` — so a local run
+- **Debug builds are their own channel** — `WeeCast Dev.app` / `com.edequalsawesome.weecast.dev` — so a local run
   never shares prefs, caches, TCC grants or the login item with an installed copy. Anything newly
   persisted must stay keyed by `Bundle.main.bundleIdentifier`.
 - **XcodeGen owns the project.** `Tinycast.xcodeproj` is committed but generated from `project.yml`;

@@ -47,13 +47,20 @@ executable name stays fixed even when release builds override the app's product 
 
 ### The dev channel
 
-Debug builds are a separate channel: **`Tinycast Dev.app`**, bundle id `com.tinycast.app.dev`. Every
+Debug builds are a separate channel: **`WeeCast Dev.app`**, bundle id `com.edequalsawesome.weecast.dev`. Every
 persisted thing is keyed by bundle id — `~/Library/Preferences/<id>.plist` (settings and hotkey
 bindings), `~/Library/Application Support/<id>/` (the onboarding marker, Notes, snippets, quicklinks,
 clipboard history, calculator history, launch ranking and frequent emoji),
 `~/Library/Caches/<id>/` (exchange rates, the update check, staged downloads), the `SMAppService`
 login item, and the Accessibility / Input Monitoring (TCC) grants — so a local build can neither read
 nor clobber an installed app's state, and both run side by side.
+
+Release builds are `WeeCast.app` (`com.edequalsawesome.weecast`). The URL schemes are `weecast-dev`
+and `weecast`, respectively; neither claims Tinycast or Raycast's schemes. OAuth Keychain services
+also include the bundle identifier. Both fork IDs classify as development in `ReleaseChannel`, so
+they disable the upstream self-updater. The
+inherited release workflow runs only in the upstream repository. Project, scheme and module names
+remain `Tinycast` to keep the fork delta small.
 
 **What earns a place in Caches is refetchable, and nothing else.** Anything the user would notice the
 loss of goes in Application Support: `~/Library/Caches` is excluded from Time Machine and the system
@@ -86,7 +93,7 @@ xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug \
 
 Both files are git-ignored because they embed absolute paths, and `sourcekit-lsp` looks for
 `buildServer.json` at the workspace root by name, so it cannot live in a subfolder. After this the
-**Build Tinycast.app (debug)** task (⌘⇧B) and **F5** re-run the script on every build, so new and
+**Build WeeCast.app (debug)** task (⌘⇧B) and **F5** re-run the script on every build, so new and
 renamed files keep resolving.
 
 **Do not run `xcode-build-server config`.** It writes `kind: xcode`, and in that mode the server ignores

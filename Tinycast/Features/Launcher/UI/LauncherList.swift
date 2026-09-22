@@ -303,6 +303,13 @@ private struct AppRow: View {
             RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                 .fill(fill)
         )
+        .overlay {
+            if selected {
+                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                    .strokeBorder(Theme.Colors.selectionBorder, lineWidth: Theme.Size.hairline)
+                    .allowsHitTesting(false)
+            }
+        }
         .armedHover($hovered)
     }
 }

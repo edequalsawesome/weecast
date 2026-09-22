@@ -1,7 +1,6 @@
 import QuartzCore
 import SwiftUI
 
-/// Central design tokens; every dark colour is the literal the forced-dark build shipped.
 enum Theme {
     enum Spacing {
         static let xxs: CGFloat = 2
@@ -341,6 +340,14 @@ enum Theme {
     }
 
     enum Colors {
+        private static func color(_ hex: UInt32, alpha: CGFloat = 1) -> NSColor {
+            NSColor(
+                srgbRed: CGFloat((hex >> 16) & 0xFF) / 255,
+                green: CGFloat((hex >> 8) & 0xFF) / 255,
+                blue: CGFloat(hex & 0xFF) / 255,
+                alpha: alpha)
+        }
+
         /// Resolves against the window's `effectiveAppearance`, so a token repaints on its own.
         static func adaptive(dark: NSColor, light: NSColor) -> Color {
             Color(nsColor: NSColor(name: nil) { $0.isDark ? dark : light })
@@ -351,8 +358,9 @@ enum Theme {
             adaptive(dark: .srgbInk(1, alpha: dark), light: .srgbInk(0, alpha: light))
         }
 
-        /// The ramp's inverse: the scrim darkens the dark surface and lightens the light one.
-        static let panelScrim = adaptive(dark: .srgbInk(0, alpha: 0.40), light: .srgbInk(1, alpha: 0.55))
+        /// The scrim keeps the palette's base tone while preserving the vibrancy composition.
+        static let panelScrim = adaptive(
+            dark: color(0x1E1E2E, alpha: 0.72), light: color(0xEFF1F5, alpha: 0.72))
         /// Modal separation inside Tinycast: the launcher recedes while its dialog is in front.
         static let dialogDimming = adaptive(
             dark: .srgbInk(0, alpha: 0.34), light: .srgbInk(0, alpha: 0.34))
@@ -366,7 +374,7 @@ enum Theme {
                 amount > 0 ? baseline * (1 - amount) : baseline - (1 - baseline) * amount
             }
             return adaptive(
-                dark: .srgbInk(0, alpha: alpha(0.40)), light: .srgbInk(1, alpha: alpha(0.55)))
+                dark: color(0x1E1E2E, alpha: alpha(0.72)), light: color(0xEFF1F5, alpha: alpha(0.72)))
         }
 
         static func panelEdgeHighlight(transparency: Int) -> Color {
@@ -384,36 +392,48 @@ enum Theme {
         }
 
         /// Selection fill, shared by every list so they look identical.
-        static let selection = ramp(dark: 0.10, light: 0.09)
+        static let selection = adaptive(
+            dark: color(0x45475A, alpha: 0.45), light: color(0xBCC0CC, alpha: 0.45))
+        static let selectionBorder = adaptive(dark: color(0xCBA6F7), light: color(0x8839EF))
         /// Mouse hover: a fainter layer, visually distinct from selection.
-        static let rowHover = ramp(dark: 0.05, light: 0.045)
+        static let rowHover = adaptive(
+            dark: color(0x313244, alpha: 0.58), light: color(0xCCD0DA, alpha: 0.58))
         /// Emoji grid chrome: a quiet tile at rest, with two legible rings on interaction.
-        static let emojiCell = ramp(dark: 0.045, light: 0.04)
+        static let emojiCell = adaptive(
+            dark: color(0x313244, alpha: 0.58), light: color(0xCCD0DA, alpha: 0.58))
         static let emojiHoverBorder = ramp(dark: 0.42, light: 0.34)
         static let emojiSelectionBorder = adaptive(
             dark: NSColor(srgbRed: 0.96, green: 0.90, blue: 0.72, alpha: 0.92),
             light: .srgbInk(0, alpha: 0.72))
         static let emojiInnerBorder = adaptive(
             dark: .srgbInk(0, alpha: 0.72), light: .srgbInk(1, alpha: 0.72))
-        static let menuHover = ramp(dark: 0.10, light: 0.09)
-        static let separator = ramp(dark: 0.10, light: 0.12)
+        static let menuHover = adaptive(
+            dark: color(0x45475A, alpha: 0.68), light: color(0xBCC0CC, alpha: 0.68))
+        static let separator = adaptive(
+            dark: color(0x585B70, alpha: 0.55), light: color(0xACB0BE, alpha: 0.55))
         /// Small control surfaces: kbd chips, glyph tiles.
-        static let controlSurface = ramp(dark: 0.10, light: 0.08)
+        static let controlSurface = adaptive(
+            dark: color(0x45475A, alpha: 0.62), light: color(0xBCC0CC, alpha: 0.62))
         /// Control borders: outlined kbd chips.
-        static let border = ramp(dark: 0.20, light: 0.18)
+        static let border = adaptive(
+            dark: color(0x585B70, alpha: 0.78), light: color(0xACB0BE, alpha: 0.78))
         /// Alpha 1, so a call site can dim it with `.opacity` and land on the value it replaced.
-        static let textPrimary = ramp(dark: 1.0, light: 1.0)
-        static let textSecondary = ramp(dark: 0.60, light: 0.60)
-        static let textTertiary = ramp(dark: 0.40, light: 0.42)
+        static let textPrimary = adaptive(dark: color(0xCDD6F4), light: color(0x4C4F69))
+        static let textSecondary = adaptive(dark: color(0xBAC2DE), light: color(0x5C5F77))
+        static let textTertiary = adaptive(dark: color(0xA6ADC8), light: color(0x5C5F77))
         static let menuSymbol = ramp(dark: 0.70, light: 0.70)
-        static let noteText = ramp(dark: 0.90, light: 0.85)
-        static let iconPlaceholder = ramp(dark: 0.06, light: 0.06)
+        static let noteText = adaptive(
+            dark: color(0xCDD6F4, alpha: 0.90), light: color(0x4C4F69, alpha: 0.90))
+        static let iconPlaceholder = adaptive(
+            dark: color(0x181825, alpha: 0.55), light: color(0xE6E9EF, alpha: 0.55))
         /// The faint wash behind the Onboarding header.
-        static let sheen = ramp(dark: 0.04, light: 0.04)
+        static let sheen = adaptive(
+            dark: color(0x181825, alpha: 0.40), light: color(0xE6E9EF, alpha: 0.40))
         /// The Settings card: a faint surface whose border doubles as the row divider.
-        static let cardFill = ramp(dark: 0.05, light: 0.04)
-        static let cardStroke = ramp(dark: 0.10, light: 0.10)
-        /// White in both: the frost brightens glass, and light glass needs more to read at all.
+        static let cardFill = adaptive(
+            dark: color(0x181825, alpha: 0.52), light: color(0xE6E9EF, alpha: 0.52))
+        static let cardStroke = adaptive(
+            dark: color(0x585B70, alpha: 0.55), light: color(0xACB0BE, alpha: 0.55))
         /// A window on the preview's plate. White in both, since the plate is always dark.
         static let layoutPreviewWindow = adaptive(
             dark: .srgbInk(1, alpha: 0.22), light: .srgbInk(1, alpha: 0.28))
@@ -423,25 +443,25 @@ enum Theme {
         /// The preview's plate: a display is dark in both appearances, so `adaptive`, not `ramp`.
         static let layoutPreviewGround = adaptive(
             dark: .srgbInk(0, alpha: 0.55), light: .srgbInk(0, alpha: 0.50))
-        static let glassFrost = adaptive(dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(1, alpha: 0.25))
+        static let glassFrost = adaptive(
+            dark: color(0x313244, alpha: 0.32), light: color(0xCCD0DA, alpha: 0.32))
         /// The pill behind the header of the section a Settings search jumped to.
         static let searchFlash = Color.accentColor.opacity(0.35)
         /// The two squares of a checkerboard, behind a colour with alpha to show.
         static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
         static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
         /// The violet of the app mark, used only to tint the About support callout.
-        static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
+        static let brand = adaptive(dark: color(0xCBA6F7), light: color(0x8839EF))
         /// The palette's drop guides while dragging, and once a release would snap it home.
         static let dropGuide = ramp(dark: 0.35, light: 0.35)
-        static let dropGuideArmed = Color.blue
+        static let dropGuideArmed = adaptive(dark: color(0x89B4FA), light: color(0x1E66F5))
         /// A dialog's standard default action; destructive defaults keep their semantic red.
         static let primaryAction = Color.blue
         /// Destructive tint: a destructive label, and a `.danger` dialog's glyph.
-        static let destructive = Color.red
-        /// Success tint: the leading glyph of a `.success` dialog.
-        static let success = Color.green
+        static let destructive = adaptive(dark: color(0xF38BA8), light: color(0xD20F39))
+        static let success = adaptive(dark: color(0xA6E3A1), light: color(0x2C701E))
         /// Progress tint: the message pill's spinner while the work behind it is still running.
-        static let progress = Color.blue
+        static let progress = adaptive(dark: color(0x89B4FA), light: color(0x1E66F5))
         /// The command output window's page: a flat surface the log sits directly on.
         static let terminalSurface = adaptive(
             dark: .srgbInk(0.07, alpha: 1), light: .srgbInk(0.99, alpha: 1))
@@ -449,7 +469,6 @@ enum Theme {
 }
 
 extension View {
-    /// A floating glass control surface, frosted so it reads brighter than clear glass.
     func frosted(in shape: some Shape) -> some View {
         glassEffect(.regular.interactive().tint(Theme.Colors.glassFrost), in: shape)
             .tint(.clear)

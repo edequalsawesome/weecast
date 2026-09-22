@@ -360,7 +360,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
         do {
             // No-op while a context is already up; after `stop()` this builds a fresh one.
-            try await runtime.boot(config: .current(supportDirectory: supportPath))
+            try await runtime.boot(config: .current(supportDirectory: supportPath, urlScheme: ExtensionOAuthSession.urlScheme))
         } catch {
             state = .failed(error.localizedDescription)
             return
@@ -619,7 +619,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
 
         do {
-            try await runtime.boot(config: .current(supportDirectory: supportPath))
+            try await runtime.boot(config: .current(supportDirectory: supportPath, urlScheme: ExtensionOAuthSession.urlScheme))
         } catch {
             backgroundFailure = error.localizedDescription
             return

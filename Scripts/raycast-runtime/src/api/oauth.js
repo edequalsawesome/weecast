@@ -2,6 +2,12 @@ import { base64ToBytes, bytesToBase64, utf8Encode } from "../polyfills.js";
 import { hostCall, hostCallSync } from "../host.js";
 import { nestedEnums } from "./enums.generated.js";
 
+let urlScheme = "weecast";
+
+export function configureOAuth(scheme) {
+  urlScheme = scheme ?? "weecast";
+}
+
 function generateRandomBytes(length) {
   const base64 = hostCallSync("crypto", "random", [length]);
   return base64ToBytes(base64);
@@ -29,13 +35,12 @@ function generateRandomString(length = 16) {
 }
 
 function generateState(client) {
-  // raycast.com/redirect expects state to be a JSON object (base64url-encoded)
-  // containing providerName and scheme ("tinycast") so it redirects to tinycast://oauth
+  // Raycast's redirect page uses the booted channel's scheme to return to this app.
   const payload = {
     token: generateRandomString(16),
     providerName: client?.providerName || "",
     providerId: client?.providerId || "",
-    scheme: "tinycast",
+    scheme: urlScheme,
   };
   const json = JSON.stringify(payload);
   const bytes = utf8Encode(json);

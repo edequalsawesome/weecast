@@ -3906,9 +3906,11 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.tinycast.app.dev;
-				PRODUCT_NAME = "Tinycast Dev";
+				PRODUCT_BUNDLE_IDENTIFIER = com.edequalsawesome.weecast.dev;
+				PRODUCT_MODULE_NAME = Tinycast;
+				PRODUCT_NAME = "WeeCast Dev";
 				SDKROOT = macosx;
+				WEECAST_URL_SCHEME = "weecast-dev";
 			};
 			name = Debug;
 		};
@@ -3923,8 +3925,11 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.tinycast.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.edequalsawesome.weecast;
+				PRODUCT_MODULE_NAME = Tinycast;
+				PRODUCT_NAME = WeeCast;
 				SDKROOT = macosx;
+				WEECAST_URL_SCHEME = weecast;
 			};
 			name = Release;
 		};

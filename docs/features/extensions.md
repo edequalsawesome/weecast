@@ -560,9 +560,9 @@ global Show in launcher switch, or this extension's — because the ranker never
 
 ## Deeplinks
 
-`raycast://extensions/<owner>/<extension>/<command>` runs an installed command from outside the app —
-a browser link, another app, a Shortcut — and `tinycast://` mirrors it so our own links never depend
-on Raycast winning the scheme. Both accept Raycast's query parameters: `arguments` as URL-encoded
+`weecast://extensions/<owner>/<extension>/<command>` runs an installed command from outside the app;
+Debug builds register `weecast-dev://` instead. Raycast links remain supported inside extensions,
+but WeeCast does not register Raycast's schemes with macOS. These accept `arguments` as URL-encoded
 JSON, `fallbackText`, and `launchType=background`, which only a no-view command receives — a view
 command always takes over the palette, so it launches as `userInitiated`. The owner is a hint: a
 scoped install matches by `owner/extension` first and falls back to the bare slug, so short links
@@ -623,22 +623,21 @@ interval floor instead of sixty.
 `useNavigation`, `OAuth`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.
 
 **OAuth 2.0 PKCE** — `OAuth.PKCEClient`, `OAuth.TokenSet`, `OAuth.RedirectMethod`, with S256 challenges and
-tokens in the login Keychain (service `com.tinycast.extensions.oauth`, `kSecAttrAccessibleWhenUnlocked`),
+tokens in the login Keychain (service `<bundle identifier>.extensions.oauth`, `kSecAttrAccessibleWhenUnlocked`),
 scoped per extension and dropped on uninstall.
 
-The redirect address belongs to the extension author's OAuth app registration, so Tinycast cannot choose
-it — it can only be there to catch it. **Tinycast therefore claims `raycast`, `com.raycast` and `tinycast`
-as URL schemes**, which is what makes all three of Raycast's redirect methods land back in the app:
+The redirect address belongs to the extension author's OAuth app registration. WeeCast registers only
+its own per-channel scheme, so providers requiring Raycast's App/AppURI callbacks cannot return to
+WeeCast without a provider-supported redirect change. Web state selects the booted WeeCast channel:
 
 | `RedirectMethod` | Registered address | How it returns |
 | --- | --- | --- |
-| `App` | `raycast://oauth?package_name=Extension` | straight to Tinycast, no server |
-| `AppURI` | `com.raycast:/oauth?package_name=Extension` | straight to Tinycast, no server |
-| `Web` | `https://raycast.com/redirect?packageName=Extension` | through Raycast's page, which reopens a claimed scheme |
+| `App` | `raycast://oauth?package_name=Extension` | not registered by WeeCast |
+| `AppURI` | `com.raycast:/oauth?package_name=Extension` | not registered by WeeCast |
+| `Web` | `https://raycast.com/redirect?packageName=Extension` | through Raycast's page to `weecast` or `weecast-dev` |
 
-Claiming `raycast` means an installed Raycast competes with Tinycast for those links and macOS picks the
-winner. That is a deliberate trade: without it, `App` redirects have nowhere to land. `Web` additionally
-depends on a page Raycast can change at any time — `ExtensionOAuthSession` times out after five minutes so
+`Web` depends on a page Raycast can change at any time; a live provider flow is not guaranteed by the
+local runtime tests. `ExtensionOAuthSession` times out after five minutes so
 a redirect that never arrives cannot wedge the palette.
 
 **`raycast://` URLs** — extensions address Raycast by scheme; the most common is a bare
@@ -766,7 +765,7 @@ node test.mjs ~/.config/raycast/extensions/<uuid> [command]
 
 # 3. the real Swift engine, against JavaScriptCore
 Scripts/run-tests.sh ext-test
-"${TMPDIR:-/tmp}"/tinycast-harness/ext-test ~/Library/Application\ Support/com.tinycast.app.dev/extensions/<name> [command]
+"${TMPDIR:-/tmp}"/tinycast-harness/ext-test ~/Library/Application\ Support/com.edequalsawesome.weecast.dev/extensions/<name> [command]
 ```
 
 `ext-test` compiles the real engine sources — there is no copy to keep in sync. `EXT_TEST_VERBOSE=1`
@@ -781,7 +780,7 @@ status items stay hidden so a test run cannot interfere with the running app's m
 
 ```sh
 EXT_TEST_MENU_BAR=1 "${TMPDIR:-/tmp}/tinycast-harness/ext-test" \
-  "$HOME/Library/Application Support/com.tinycast.app.dev/extensions/opencodex-usage" usage-menu-bar
+  "$HOME/Library/Application Support/com.edequalsawesome.weecast.dev/extensions/opencodex-usage" usage-menu-bar
 ```
 
 ### Debugging a failing extension
@@ -807,7 +806,7 @@ never shares with an installed copy.
 | `LocalStorage`, `Cache`, preferences | `extension-data/<safe name>.json` | yes |
 | Command subtitle, refresh state | `extension-commands.json` | yes |
 | `environment.supportPath` | `extension-support/<safe name>/` | yes |
-| OAuth tokens | macOS Keychain (`com.tinycast.extensions.oauth`) | yes |
+| OAuth tokens | macOS Keychain (`<bundle identifier>.extensions.oauth`) | yes |
 | Menu-bar activation and snapshot | `extension-commands.json` | yes |
 | Icon override | `UserDefaults` → `extensionAppearances` | yes |
 | Command shortcuts | `UserDefaults` → `hotkey.extensionCommand.<entry id>` | yes |

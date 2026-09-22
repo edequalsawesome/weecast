@@ -9,6 +9,7 @@ import * as JSXRuntime from "react/jsx-runtime";
 import { describeError, log, settle } from "./host.js";
 import { fireTimer, setUncaughtHandler } from "./polyfills.js";
 import { configureNodeShims } from "./node-shims.js";
+import { configureOAuth } from "./api/oauth.js";
 import { defineModule, evaluateCommonJS } from "./modules.js";
 import { resolveComponent } from "./async-component.js";
 import { NavigationRoot, setFieldCommandHandler } from "./api/components.js";
@@ -113,6 +114,7 @@ globalThis.__tinycast = {
   boot(configJson) {
     const config = JSON.parse(configJson);
     configureNodeShims(config.node ?? {});
+    configureOAuth(config.urlScheme);
     configureSystem(config);
     return "ok";
   },

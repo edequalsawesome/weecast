@@ -12,8 +12,9 @@ struct ExtensionBootConfig: Sendable {
     var workingDirectory: String
     var totalMemory: Double
     var environmentVariables: [String: String]
+    var urlScheme: String = "weecast"
 
-    static func current(supportDirectory: URL) -> ExtensionBootConfig {
+    static func current(supportDirectory: URL, urlScheme: String = "weecast") -> ExtensionBootConfig {
         let info = ProcessInfo.processInfo
         var arch = "arm64"
         #if arch(x86_64)
@@ -36,12 +37,13 @@ struct ExtensionBootConfig: Sendable {
             temporaryDirectory: FileManager.default.temporaryDirectory.path,
             workingDirectory: supportDirectory.path,
             totalMemory: Double(info.physicalMemory),
-            environmentVariables: variables)
+            environmentVariables: variables, urlScheme: urlScheme)
     }
 
     func jsonString() -> String {
         ExtensionRuntime.jsonString(
             from: [
+                "urlScheme": urlScheme,
                 "node": [
                     "arch": arch,
                     "release": release,

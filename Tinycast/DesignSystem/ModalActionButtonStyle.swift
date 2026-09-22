@@ -36,7 +36,7 @@ struct ModalActionButtonStyle: ButtonStyle {
             case .primary:
                 Theme.Colors.primaryAction.opacity(isHighlighted ? 0.28 : 0.20)
             case .destructive:
-                Theme.Colors.destructive.opacity(isHighlighted ? 0.28 : 0.20)
+                Theme.Colors.destructive.opacity(isHighlighted ? 0.24 : 0.16)
             case .standard, .cancel:
                 isHighlighted ? Theme.Colors.selection : Theme.Colors.controlSurface
             }
@@ -47,7 +47,7 @@ struct ModalActionButtonStyle: ButtonStyle {
             case .standard: .primary
             case .primary: Theme.Colors.primaryAction
             case .cancel: Theme.Colors.textSecondary
-            case .destructive: Theme.Colors.destructive
+            case .destructive: Theme.Colors.textPrimary
             }
         }
 

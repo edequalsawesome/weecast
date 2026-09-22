@@ -10,6 +10,12 @@ private struct LeadCardChrome: ViewModifier {
         content
             .background(shape.fill(Theme.Colors.cardFill))
             .background(shape.fill(fill))
+            .overlay {
+                if selected {
+                    shape.strokeBorder(Theme.Colors.selectionBorder, lineWidth: Theme.Size.hairline)
+                        .allowsHitTesting(false)
+                }
+            }
             .armedHover($hovered)
     }
 

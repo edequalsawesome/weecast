@@ -1,4 +1,19 @@
-# Tinycast
+# WeeCast
+
+A small personal [Tinycast](https://github.com/abue-ammar/tinycast) fork with Catppuccin Mocha
+(Dark) and Latte (Light). This branch adds no custom sync engine; future syncing follows upstream.
+
+Build locally using [docs/development.md](docs/development.md). The project and scheme remain
+`Tinycast`; the apps are `WeeCast.app` and `WeeCast Dev.app`, with separate data and permissions.
+Automatic updates are disabled for both WeeCast identities. No notarized WeeCast download is
+published yet, and the upstream installation commands below install **Tinycast, not WeeCast**.
+
+This is an independent modification, not an official Tinycast release. The original copyright,
+AGPL license and third-party notices are retained in [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+Report fork-specific issues in [this repository](https://github.com/edequalsawesome/weecast/issues).
+The following feature and usage information describes the upstream app we build on.
+
+## Upstream Tinycast
 
 **A tiny, fully native macOS launcher. One hotkey, everything you reach for all day, under 100 MB of
 RAM.**
@@ -75,7 +90,7 @@ keep it actively maintained. GitHub Sponsors isn't available in my country, so p
 - **Raycast extensions** — run the ones you already have natively, rendered as SwiftUI.
 - **Backup and import** — export your settings to a file, or import your setup from Raycast.
 
-## Install
+## Install upstream Tinycast
 
 First, add the tap:
 

@@ -1,7 +1,7 @@
 # WeeCast
 
 A small personal [Tinycast](https://github.com/abue-ammar/tinycast) fork with Catppuccin Mocha
-(Dark) and Latte (Light). This branch adds no custom sync engine; future syncing follows upstream.
+(Dark) and Latte (Light).
 
 Build locally using [docs/development.md](docs/development.md). The project and scheme remain
 `Tinycast`; the apps are `WeeCast.app` and `WeeCast Dev.app`, with separate data and permissions.

@@ -34,24 +34,33 @@ struct ModalActionButtonStyle: ButtonStyle {
         private var fill: Color {
             switch role {
             case .primary:
-                Theme.Colors.primaryAction.opacity(isHighlighted ? 0.28 : 0.20)
+                Theme.Colors.primaryAction.opacity(accentOpacity)
             case .destructive:
-                Theme.Colors.destructive.opacity(isHighlighted ? 0.24 : 0.16)
+                Theme.Colors.destructive.opacity(configuration.isPressed ? 0.24 : hovered ? 0.20 : 0.16)
             case .standard, .cancel:
-                isHighlighted ? Theme.Colors.selection : Theme.Colors.controlSurface
+                if configuration.isPressed {
+                    Theme.Colors.controlPressed
+                } else if hovered {
+                    Theme.Colors.controlHover
+                } else {
+                    Theme.Colors.controlSurface
+                }
             }
+        }
+
+        private var accentOpacity: Double {
+            if configuration.isPressed { return 0.36 }
+            if hovered { return 0.28 }
+            return 0.20
         }
 
         private var labelColor: Color {
             switch role {
-            case .standard: .primary
+            case .standard, .cancel: .primary
             case .primary: Theme.Colors.primaryAction
-            case .cancel: Theme.Colors.textSecondary
             case .destructive: Theme.Colors.textPrimary
             }
         }
-
-        private var isHighlighted: Bool { hovered || configuration.isPressed }
     }
 }
 

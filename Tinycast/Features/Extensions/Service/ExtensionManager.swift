@@ -16,6 +16,9 @@ enum ExtensionSessionState: Equatable {
 @Observable
 final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     private(set) var installed: [InstalledExtension] = []
+    /// The store's newer version of each installed extension that has one, keyed by manifest name.
+    private(set) var updates: [String: ExtensionListing] = [:]
+    private(set) var updating: Set<String> = []
     private(set) var menuBars: ExtensionMenuBarManager?
     private(set) var state: ExtensionSessionState = .idle
     /// The command whose session is live, if any.
@@ -39,6 +42,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     let appearances = ExtensionAppearanceStore()
     private let commandMetadata = ExtensionCommandMetadataStore(
         fileURL: ExtensionCatalog.commandMetadataFile())
+    private let storeVersions = ExtensionVersionStore(fileURL: ExtensionCatalog.storeVersionsFile())
     @ObservationIgnored private let runtime: ExtensionRuntime
     @ObservationIgnored private let bridge: ExtensionHostBridge
     @ObservationIgnored private let oauthSession = ExtensionOAuthSession()
@@ -97,14 +101,18 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                 supportDirectory: ExtensionCatalog.supportRoot(),
                 makeExecution: { [weak self, weak coordinator] owner, command, type in
                     guard let self, let coordinator else { return nil }
-                    let host = ExtensionMenuBarHost(owner: owner, command: command, launchType: type, storage: self.storage,
-                                                    manager: self, coordinator: coordinator)
+                    let host = ExtensionMenuBarHost(
+                        owner: owner, command: command, launchType: type, storage: self.storage,
+                        manager: self, coordinator: coordinator)
                     let bridge = self.bridge.scoped(to: host)
-                    return .init(runtime: ExtensionRuntime(hostAPI: bridge,
-                                                          priority: type == .background ? .utility : .userInitiated), stop: {
-                        host.stop()
-                        bridge.context = nil
-                    }, enableInteraction: { host.enableInteraction() })
+                    return .init(
+                        runtime: ExtensionRuntime(
+                            hostAPI: bridge,
+                            priority: type == .background ? .utility : .userInitiated),
+                        stop: {
+                            host.stop()
+                            bridge.context = nil
+                        }, enableInteraction: { host.enableInteraction() })
                 },
                 onError: { [weak coordinator] message, owner, needsPreferences in
                     coordinator?.showHUD(message)
@@ -181,8 +189,9 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             backgroundRefresh: ExtensionRefreshPolicy.indicator(
                 schedulable: schedulable, backgroundEnabled: metadata.backgroundEnabled,
                 lastError: metadata.lastError),
+            keywords: command.keywords,
             iconOverride: icon(for: command, in: owner, appearance: appearance),
-            ownerName: owner.title)
+            ownerName: owner.title, installedAt: owner.installedAt)
     }
 
     /// Persist and re-publish, so rows change under the user rather than on the next scan.
@@ -214,7 +223,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     // MARK: - Install / uninstall
 
     func install(from source: URL) async throws {
-        _ = try ExtensionCatalog.install(from: source)
+        untrack(try ExtensionCatalog.install(from: source).manifest.name)
         await refresh()
     }
 
@@ -229,16 +238,27 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
     }
 
-    /// Progress is reported per step: building from source can take minutes.
     func install(
-        listing: ExtensionListing, packageManager: ExtensionPackageManager,
-        additionalSearchPaths: [String] = [],
+        _ listing: ExtensionListing,
         onProgress: @Sendable @escaping (ExtensionInstaller.Progress) -> Void
     ) async throws {
+        try await installFromStore(listing, onProgress: onProgress)
+        await refresh()
+    }
+
+    /// Progress is reported per step: building from source can take minutes.
+    @discardableResult
+    func install(
+        _ source: ExtensionGitHubSource, packageManager: ExtensionPackageManager,
+        additionalSearchPaths: [String],
+        onProgress: @Sendable @escaping (ExtensionInstaller.Progress) -> Void
+    ) async throws -> InstalledExtension {
         let installer = ExtensionInstaller(
             packageManager: packageManager, additionalSearchPaths: additionalSearchPaths)
-        try await installer.install(listing, onProgress: onProgress)
+        let installed = try await installer.install(source, onProgress: onProgress)
+        untrack(installed.manifest.name)
         await refresh()
+        return installed
     }
 
     /// Refreshes once at the end, and returns what failed so the pane can name it.
@@ -249,7 +269,9 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         var failed: [String] = []
         for (index, candidate) in candidates.enumerated() {
             do {
-                _ = try ExtensionCatalog.install(from: candidate.directory)
+                let name = try ExtensionCatalog.install(from: candidate.directory).manifest.name
+                storeVersions.record(nil, for: name)
+                updates[name] = nil
             } catch {
                 failed.append(candidate.title)
             }
@@ -257,6 +279,63 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
         await refresh()
         return failed
+    }
+
+    // MARK: - Updates
+
+    /// Asked when Settings opens; a lookup that fails is skipped rather than reported.
+    func checkForUpdates() async {
+        guard isEnabled else { return }
+        let tracked = storeVersions.tracked
+        let lookups = installed.map(\.manifest).filter { tracked.contains($0.name) }
+        let client = ExtensionStoreClient()
+        let latest = await withTaskGroup(of: ExtensionListing?.self) { group in
+            for manifest in lookups {
+                let (handle, name) = (manifest.storeHandle, manifest.name)
+                group.addTask { try? await client.lookup(handle: handle, name: name) }
+            }
+            var found: [ExtensionListing] = []
+            for await listing in group {
+                if let listing { found.append(listing) }
+            }
+            return found
+        }
+        guard !Task.isCancelled else { return }
+        updates = Dictionary(
+            storeVersions.reconcile(with: latest).map { ($0.name, $0) }, uniquingKeysWith: { $1 })
+    }
+
+    /// One at a time, like an import; returns the titles that failed so the pane can name them.
+    func update(_ names: [String]) async -> [String] {
+        updating.formUnion(names)
+        var failed: [String] = []
+        for name in names {
+            defer { updating.remove(name) }
+            guard let listing = updates[name] else { continue }
+            do {
+                try await installFromStore(listing, onProgress: { _ in })
+            } catch {
+                failed.append(listing.title)
+            }
+        }
+        await refresh()
+        return failed
+    }
+
+    /// Replaces only the extension's directory, so its preferences and storage carry over.
+    private func installFromStore(
+        _ listing: ExtensionListing,
+        onProgress: @Sendable @escaping (ExtensionInstaller.Progress) -> Void
+    ) async throws {
+        let installed = try await ExtensionInstaller().install(listing, onProgress: onProgress)
+        storeVersions.record(listing.commitSHA, for: installed.manifest.name)
+        updates[installed.manifest.name] = nil
+    }
+
+    /// A folder or GitHub install is the user's own copy, so the store has nothing to offer it.
+    private func untrack(_ name: String) {
+        storeVersions.forget(name)
+        updates[name] = nil
     }
 
     /// Takes everything keyed to it: files, storage, icon, and its shortcuts.
@@ -275,6 +354,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         try? ExtensionCatalog.uninstall(installedExtension)
         storage.removeAll(extension: installedExtension.manifest.name)
         commandMetadata.removeAll(extension: installedExtension.manifest.name)
+        untrack(installedExtension.manifest.name)
         appearances.set(nil, for: installedExtension.manifest.name)
         onDidUninstall?(entryIDs)
         await refresh()
@@ -320,7 +400,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     ) async {
         guard isEnabled else { return }
         if command.mode == .menuBar || (command.mode == .noView && launchType == .background) {
-            menuBars?.run(owner, command: command, arguments: arguments, type: launchType, context: launchContext)
+            menuBars?.run(
+                owner, command: command, arguments: arguments, type: launchType, context: launchContext)
             return
         }
         await stop()
@@ -447,7 +528,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     func menuBarIsEnabled(_ reference: ExtensionCommandRef) -> Bool {
         commandMetadata.metadata(
-            extension: reference.extensionName, command: reference.commandName).menuBarEnabled
+            extension: reference.extensionName, command: reference.commandName
+        ).menuBarEnabled
     }
 
     /// Switching one on runs it: the item it draws is whatever that run renders.
@@ -833,7 +915,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                 [toast.title, toast.message].compactMap { $0 }.joined(separator: " — "))
             return stamped.id
         }
-        toasts.append(stamped)
+        toasts = [stamped]
         // Non-animated toasts self-dismiss; an animated one stays until the command hides it.
         if stamped.style != .animated { scheduleToastDismissal(id: stamped.id) }
         return stamped.id
@@ -909,11 +991,9 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard let (owner, command) = resolve(link) else {
             throw ExtensionLaunchError.unknownCommand(link.commandName)
         }
-        Task {
-            await run(
-                owner, command: command, arguments: link.arguments,
-                fallbackText: link.fallbackText, launchType: link.launchType)
-        }
+        coordinator?.runExtensionCommand(
+            entry(for: command, in: owner), arguments: link.arguments,
+            fallbackText: link.fallbackText, launchType: link.launchType)
     }
 
     func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult

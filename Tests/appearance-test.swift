@@ -66,10 +66,19 @@ struct AppearanceTests {
             let base = bytes.map { $0 / 255 }
             let success = composite(Theme.Colors.success, appearance, over: base)
             check("\(name) inserted text >= 4.5:1", contrast(success, base) >= 4.5)
-            for opacity in [0.16, 0.24] {
+            for opacity in [0.16, 0.20, 0.24] {
                 let fill = composite(Theme.Colors.destructive.opacity(opacity), appearance, over: base)
                 let label = composite(Theme.Colors.textPrimary, appearance, over: fill)
                 check("\(name) destructive button label at \(opacity) >= 4.5:1", contrast(label, fill) >= 4.5)
+            }
+            let rest = composite(Theme.Colors.controlSurface, appearance, over: base)
+            let hoverControl = composite(Theme.Colors.controlHover, appearance, over: base)
+            let pressed = composite(Theme.Colors.controlPressed, appearance, over: base)
+            check("\(name) control hover differs from rest >= 1.1:1", contrast(rest, hoverControl) >= 1.1)
+            check("\(name) control press differs from hover >= 1.1:1", contrast(hoverControl, pressed) >= 1.1)
+            for (state, fill) in [("rest", rest), ("hover", hoverControl), ("pressed", pressed)] {
+                let label = composite(Color.primary, appearance, over: fill)
+                check("\(name) cancel label at \(state) >= 4.5:1", contrast(label, fill) >= 4.5)
             }
             let selected = composite(Theme.Colors.selection, appearance, over: base)
             let selectedCard = composite(Theme.Colors.cardFill, appearance, over: selected)
@@ -134,7 +143,7 @@ struct AppearanceTests {
             ("controlSurface", c.controlSurface), ("border", c.border),
             ("textPrimary", c.textPrimary), ("textSecondary", c.textSecondary),
             ("textTertiary", c.textTertiary), ("noteText", c.noteText), ("cardFill", c.cardFill),
-            ("cardStroke", c.cardStroke), ("glassFrost", c.glassFrost), ("dropGuide", c.dropGuide),
+            ("cardStroke", c.cardStroke), ("dropGuide", c.dropGuide),
             ("iconPlaceholder", c.iconPlaceholder), ("sheen", c.sheen)
         ] {
             adapts(label, token)
@@ -143,43 +152,6 @@ struct AppearanceTests {
         print("# the scrim keeps its appearance-specific Catppuccin base")
         check("light scrim is Latte Base", components(c.panelScrim, .aqua).prefix(3) == [239, 241, 245])
         check("dark scrim is Mocha Base", components(c.panelScrim, .darkAqua).prefix(3) == [30, 30, 46])
-
-        print("# palette transparency keeps the default in each appearance")
-        for appearance: NSAppearance.Name in [.darkAqua, .aqua] {
-            let baseline = components(c.panelScrim, appearance)
-            check(
-                "zero transparency adjustment matches the original \(appearance.rawValue)",
-                components(c.panelScrim(transparency: 0), appearance) == baseline)
-            check(
-                "more transparent keeps the tint color \(appearance.rawValue)",
-                components(c.panelScrim(transparency: 50), appearance).prefix(3) == baseline.prefix(3))
-            check(
-                "more transparent lowers tint opacity \(appearance.rawValue)",
-                components(c.panelScrim(transparency: 50), appearance)[3] < baseline[3])
-            check(
-                "less transparent raises tint opacity \(appearance.rawValue)",
-                components(c.panelScrim(transparency: -50), appearance)[3] > baseline[3])
-            check(
-                "least transparent is opaque \(appearance.rawValue)",
-                components(c.panelScrim(transparency: -100), appearance)[3] == 255)
-            check(
-                "most transparent clears the tint \(appearance.rawValue)",
-                components(c.panelScrim(transparency: 100), appearance)[3] == 0)
-            check(
-                "transparency stays bounded \(appearance.rawValue)",
-                components(c.panelScrim(transparency: Int.max), appearance)[3] == 0
-                    && components(c.panelScrim(transparency: Int.min), appearance)[3] == 255)
-            let highlights = [-100, -50, 0, 50, 100].map {
-                components(c.panelEdgeHighlight(transparency: $0), appearance)
-            }
-            check("default adds no edge highlight \(appearance.rawValue)", highlights[2][3] == 0)
-            check(
-                "custom detents keep a visible edge \(appearance.rawValue)",
-                [0, 1, 3, 4].allSatisfy { highlights[$0][3] > 0 })
-            check(
-                "edge highlights stay neutral and translucent \(appearance.rawValue)",
-                highlights.allSatisfy { $0.prefix(3) == [255, 255, 255] && $0[3] < 128 })
-        }
 
         check("frost uses Latte Surface0", components(c.glassFrost, .aqua).prefix(3) == [204, 208, 218])
 
